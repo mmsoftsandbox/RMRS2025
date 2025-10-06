@@ -1,15 +1,29 @@
 ﻿using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using RMRS.ConsoleApp.DataModel;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace RMRS.ConsoleApp
 {
+    /// <summary>
+    /// Класс работы в данными для уровня бинес-логики.
+    /// Реализован через SqlConnection, непосредственными запросами к БД
+    /// </summary>
     public class DataLayerSql : IDataLayer
     {
         private SqlConnection _connection { get; set; }
 
-        public DataLayerSql(SqlConnection connection)
+        private IConfiguration _configuration { get; set; }
+
+        private int _commandTimeout { get; set; }
+
+        public DataLayerSql(SqlConnection connection, IConfiguration configuration)
         {
             _connection = connection;
+            _configuration = configuration;
+
+            var timeout = _configuration.GetValue<int>("CommandTimeout");
+            _commandTimeout = timeout > 0 ? timeout : 50;
         }
 
         public async Task EnsureConnection()
@@ -33,7 +47,7 @@ namespace RMRS.ConsoleApp
         /// <returns>Nullable значение</returns>
         private object? GetValue(SqlDataReader reader, string fieldName)
         {
-            // @@@ Кешировать Ordinals
+            // TO DO Кешировать Ordinals
             return reader.IsDBNull(reader.GetOrdinal(fieldName)) ? null : reader[fieldName];
         }
 
@@ -55,6 +69,8 @@ namespace RMRS.ConsoleApp
 
             using (var command = new SqlCommand(query, _connection))
             {
+                command.CommandTimeout = _commandTimeout;
+
                 command.Parameters.AddWithValue("@EmployeeID", employeeId);
 
                 return (int)(await command.ExecuteScalarAsync() ?? 0) > 0;
@@ -69,6 +85,8 @@ namespace RMRS.ConsoleApp
 
             using (var command = new SqlCommand(query, _connection))
             {
+                command.CommandTimeout = _commandTimeout;
+
                 command.Parameters.AddWithValue("@EmployeeID", employeeId);
                 using (var reader = await command.ExecuteReaderAsync())
                 {
@@ -105,6 +123,8 @@ namespace RMRS.ConsoleApp
 
             using (var command = new SqlCommand(query, _connection))
             {
+                command.CommandTimeout = _commandTimeout;
+
                 command.Parameters.AddWithValue("@FirstName", GetValueOrDBNull(employee.FirstName));
                 command.Parameters.AddWithValue("@LastName", GetValueOrDBNull(employee.LastName));
                 command.Parameters.AddWithValue("@Email", GetValueOrDBNull(employee.Email));
@@ -122,7 +142,9 @@ namespace RMRS.ConsoleApp
 
             using (var command = new SqlCommand(query, _connection))
             {
-                return (int)(await command.ExecuteScalarAsync() ?? 0); // @@@
+                command.CommandTimeout = _commandTimeout;
+
+                return (int)(await command.ExecuteScalarAsync() ?? 0);
             }
         }
 
@@ -142,30 +164,34 @@ namespace RMRS.ConsoleApp
             var query = $"SELECT * FROM Employees ORDER BY EmployeeID OFFSET {page * pageSize} ROWS FETCH NEXT {pageSize} ROWS ONLY";
 
             using (var command = new SqlCommand(query, _connection))
-            using (var reader = await command.ExecuteReaderAsync())
             {
-                var employees = new List<Employee>();
-                if (!reader.HasRows)
+                command.CommandTimeout = _commandTimeout;
+
+                using (var reader = await command.ExecuteReaderAsync())
                 {
+                    var employees = new List<Employee>();
+                    if (!reader.HasRows)
+                    {
+                        return employees;
+                    }
+
+                    while (reader.Read())
+                    {
+                        var employee = new Employee()
+                        {
+                            EmployeeId = (int)reader["EmployeeID"],
+                            FirstName = (string?)GetValue(reader, "FirstName"),
+                            LastName = (string?)GetValue(reader, "LastName"),
+                            DateOfBirth = GetDateOnly(GetValue(reader, "DateOfBirth")),
+                            Email = (string?)GetValue(reader, "Email"),
+                            Salary = (decimal?)GetValue(reader, "Salary")
+                        };
+
+                        employees.Add(employee);
+                    }
+
                     return employees;
                 }
-
-                while (reader.Read())
-                {
-                    var employee = new Employee()
-                    {
-                        EmployeeId = (int)reader["EmployeeID"],
-                        FirstName = (string?)GetValue(reader, "FirstName"),
-                        LastName = (string?)GetValue(reader, "LastName"),
-                        DateOfBirth = GetDateOnly(GetValue(reader, "DateOfBirth")),
-                        Email = (string?)GetValue(reader, "Email"),
-                        Salary = (decimal?)GetValue(reader,"Salary")
-                    };
-
-                    employees.Add(employee);
-                }
-
-                return employees;
             }
         }
 
@@ -177,6 +203,7 @@ namespace RMRS.ConsoleApp
 
             using (var command = new SqlCommand(query, _connection))
             {
+                command.CommandTimeout = _commandTimeout;
                 command.Parameters.AddWithValue("@Value", GetValueOrDBNull(newValue));
                 command.Parameters.AddWithValue("@EmployeeID", employeeId);
 
@@ -194,6 +221,8 @@ namespace RMRS.ConsoleApp
 
             using (var command = new SqlCommand(query, _connection))
             {
+                command.CommandTimeout = _commandTimeout;
+
                 command.Parameters.AddWithValue("@EmployeeID", employeeId);
                 int rowsAffected = await command.ExecuteNonQueryAsync();
 
@@ -212,6 +241,8 @@ namespace RMRS.ConsoleApp
 
             using (var command = new SqlCommand(query, _connection))
             {
+                command.CommandTimeout = _commandTimeout;
+
                 var count = await command.ExecuteScalarAsync();
                 return (int)(count ?? 0);
             }

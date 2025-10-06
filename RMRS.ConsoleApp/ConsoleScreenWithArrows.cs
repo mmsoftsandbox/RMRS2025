@@ -7,6 +7,10 @@ using static RMRS.ConsoleApp.Helpers.UserInteractiveHelper;
 
 namespace RMRS.ConsoleApp
 {
+    /// <summary>
+    /// Модел работы с экраном. 
+    /// Реализует Меню с управлением стрелками
+    /// </summary>
     public class ConsoleScreenWithArrows : ConsoleScreenBase
     {
         private const string _selectedMarker = ">>> ";
@@ -94,8 +98,9 @@ namespace RMRS.ConsoleApp
                         {
                             Console.WriteLine(); // Отступ перед output опции
 
-                            var _result = await action.Invoke();
-                            if (_result?.Exit ?? false)
+                            var result = await action.Invoke();
+                            menu.SelectedIndex = 0;
+                            if (result?.Exit ?? false)
                             {
                                 return;
                             }

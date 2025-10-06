@@ -11,20 +11,42 @@ using System.Reflection;
 
 namespace RMRS.ConsoleApp;
 
+/// <summary>
+/// Основной класс реализующий бизнес-логику.
+/// Работает через унифицированный слой доступа к данным.
+/// Обеспечивает взаимодействие с пользователем и предоставление информации через
+/// унифицированный интерфейс модели консольного меню и экрана 
+/// </summary>
 public class BusinessLogic
 {
+    /// <summary>
+    /// Интерфейс работы в данными для уровня бинес-логики.
+    /// </summary>
     private IDataLayer _dataLayer { get; set; }
+    /// <summary>
+    /// Интерфейс модели работы с экраном
+    /// </summary>
     private IConsoleScreen _console { get; set; }
 
+    /// <summary>
+    /// Данные структуры меню
+    /// </summary>
     private MenuData _menu { get; set; } = new MenuData();
 
-
+    /// <summary>
+    /// Конструктор с DI
+    /// </summary>
+    /// <param name="dataLayer"></param>
+    /// <param name="consoleScreen"></param>
     public BusinessLogic(IDataLayer dataLayer, IConsoleScreen consoleScreen)
     {
         _dataLayer = dataLayer;
         _console = consoleScreen;
     }
 
+    /// <summary>
+    /// Заполняем данными меню
+    /// </summary>
     private void InitMenu()
     {
         _menu = new MenuData()
@@ -54,12 +76,21 @@ public class BusinessLogic
         _menu.MenuTree[index: 5].Operation = _console.DoMenuExitDefault; // Стандартный выход из меню
     }
 
+    /// <summary>
+    /// Запуск цикла обработки меню. Основная точка входа в процедуру ваимодействия с польователем.
+    /// </summary>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     public async Task RunAsync(CancellationToken ct = default)
     {
         InitMenu();
         await _console.RunMenuLoop(_menu, ct);
     }
 
+    /// <summary>
+    /// Добавить сотрудника
+    /// </summary>
+    /// <returns></returns>
     public async Task<OperationResult?> AddEmployee()
     {
         try
@@ -85,6 +116,11 @@ public class BusinessLogic
         return null;
     }
 
+    /// <summary>
+    /// Покаать всех сотрудников.
+    /// Поддерживает пагинацию.
+    /// </summary>
+    /// <returns></returns>
     public async Task<OperationResult?> ViewEmployees()
     {
         var employeeCount = await _dataLayer.GetEmployeesCount();
@@ -156,6 +192,10 @@ public class BusinessLogic
         return null;
     }
 
+    /// <summary>
+    /// Обновить данные сотрудника
+    /// </summary>
+    /// <returns></returns>
     public async Task<OperationResult?> UpdateEmployee()
     {
         try
@@ -182,10 +222,10 @@ public class BusinessLogic
 
             // Init menu
             var editFields = Employee.PropNames
-                .Where(x => x.Key != nameof(Employee.Props.EmployeeId)).OrderBy(x => x.Key)
+                .Where(x => x.Key != nameof(Employee.Props.EmployeeId))//.OrderBy(x => x.Key)
                 .Select(x => x.Key).ToArray();
             var _submenuOptions = Employee.PropNames
-                .Where(x => x.Key != nameof(Employee.Props.EmployeeId)).OrderBy(x => x.Key)
+                .Where(x => x.Key != nameof(Employee.Props.EmployeeId))//.OrderBy(x => x.Key)
                 .Select((x, i) => new MenuData.MenuItem() { ActionId = i + 1, Prompt = x.Value })
                 .ToList();
             _submenuOptions.Add(new MenuData.MenuItem()
@@ -230,6 +270,13 @@ public class BusinessLogic
         return null;
     }
 
+    /// <summary>
+    /// Обновить данные конкретного поля сотрудника
+    /// </summary>
+    /// <param name="employeeId">Id сотрудника</param>
+    /// <param name="fieldName">Поле для изменения</param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
     private async Task UdateEmloyeeField(int employeeId, string fieldName)
     {
         var editField = Enum.Parse<Employee.Props>(fieldName);
@@ -266,6 +313,10 @@ public class BusinessLogic
             Console.WriteLine("Ошибка при именении записи!");
     }
 
+    /// <summary>
+    /// Удалить сотрудника
+    /// </summary>
+    /// <returns></returns>
     public async Task<OperationResult?> DeleteEmployee()
     {
         try
@@ -296,6 +347,10 @@ public class BusinessLogic
         return null;
     }
 
+    /// <summary>
+    /// Получить аналитическую информацию по сотрудникам
+    /// </summary>
+    /// <returns></returns>
     public async Task<OperationResult?> ShowAnalytics()
     {
         var salaryCount = await _dataLayer.GetAnalytics();

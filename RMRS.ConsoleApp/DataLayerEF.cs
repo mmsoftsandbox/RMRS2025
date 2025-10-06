@@ -9,6 +9,10 @@ using RMRS.ConsoleApp.DataModel;
 
 namespace RMRS.ConsoleApp
 {
+    /// <summary>
+    /// Класс работы в данными для уровня бинес-логики.
+    /// Реализован через EntityFrameworkCore
+    /// </summary>
     public class DataLayerEF : IDataLayer
     {
         private EmployeeDBContext _dbContext;

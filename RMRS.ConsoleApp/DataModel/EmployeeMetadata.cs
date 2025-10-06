@@ -42,6 +42,9 @@ public partial class Employee
 
     public static string DisplayName { get; } = typeof(Employee).GetCustomAttribute<DisplayNameAttribute>()?.DisplayName ?? nameof(Employee);
 
+    /// <summary>
+    /// Названия полей, читабельные 
+    /// </summary>
     public static Dictionary<string, string> PropNames => _propNames.Value;
 
     private readonly static Lazy<Dictionary<string, string>> _propNames = new Lazy<Dictionary<string, string>>(() =>

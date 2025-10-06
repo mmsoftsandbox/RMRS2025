@@ -11,6 +11,11 @@ using static RMRS.ConsoleApp.Helpers.StringHelper;
 
 namespace RMRS.ConsoleApp
 {
+    /// <summary>
+    /// Модель работы с экраном. 
+    /// Реализует Меню с выбором номера пункта меню.
+    /// Вывод на экран может рассматривается бесконечной лентой выводимых строк. 
+    /// </summary>
     public class ConsoleScreenBase : IConsoleScreen
     {
         public virtual MenuData InitMenu(List<MenuData.MenuItem> menuTree)
@@ -79,8 +84,8 @@ namespace RMRS.ConsoleApp
                         {
                             Console.WriteLine(); // Отступ перед output опции
 
-                            var _result = await action.Invoke();
-                            if (_result?.Exit ?? false)
+                            var result = await action.Invoke();
+                            if (result?.Exit ?? false)
                             {
                                 return;
                             }
@@ -102,7 +107,14 @@ namespace RMRS.ConsoleApp
                 Console.WriteLine(line);
             }
         }
-        public void PrintTable(List<List<object?>> rows, Dictionary<string, (int Width, string Title)> spec)
+
+        /// <summary>
+        /// Отрисовка таблицы. 
+        /// Значения в строках по ширине в соответствии с spec.Width
+        /// </summary>
+        /// <param name="rows">Построчные данные</param>
+        /// <param name="spec">Спецификациия колонок</param>
+        public virtual void PrintTable(List<List<object?>> rows, Dictionary<string, (int Width, string Title)> spec)
         {
             var lines = new List<string>();
             var lineData = new List<string>();
@@ -110,7 +122,7 @@ namespace RMRS.ConsoleApp
             foreach (var row in rows)
             {
                 lineData = row.Select((x, i) => PadLeft(x, spec[columns[i]].Width))
-                .ToList();
+                    .ToList();
                 lines.Add(string.Join('|', lineData));
             }
 

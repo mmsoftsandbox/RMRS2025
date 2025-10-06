@@ -20,7 +20,6 @@ namespace RMRS.ConsoleApp
         // Mutex для проверки на повторный запуск приложения 
         static Mutex? InstanceMutex;
 
-        // Конфигурируем
         private static IConfiguration Configuration => new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -29,15 +28,26 @@ namespace RMRS.ConsoleApp
         // Использовать EF
         private static bool UseEntityFramework => Configuration.GetValue<bool>("UseEntityFramework");
 
+        // Конфигурируем сервисы
         private static void ConfigureServices(IServiceCollection services)
         {
+            services.AddSingleton<IConfiguration>(Configuration);
+
+            // Регистрация SqlConnection, фабрика
+            services.AddTransient<SqlConnection>(sp =>
+            {
+                return new SqlConnection(Configuration.GetValue<String>("ConnectionStrings:EmployeeDBConnectionString"));
+            });
+
+
             if (UseEntityFramework)
             {
 
-                services.AddDbContext<EmployeeDBContext>(options =>
+                services.AddDbContext<EmployeeDBContext>((provider, options) =>
                 {
+                    var connection = provider.GetRequiredService<SqlConnection>();
                     options.UseSqlServer(
-                        Configuration.GetValue<String>("ConnectionStrings:EmployeeDBConnectionString"),
+                        connection,
                         b =>
                         {
                             b.EnableRetryOnFailure();
@@ -52,11 +62,6 @@ namespace RMRS.ConsoleApp
             }
             else // Использовать SqlClient
             {
-                services.AddTransient(provider =>
-                {
-                    return new SqlConnection(Configuration.GetValue<String>("ConnectionStrings:EmployeeDBConnectionString"));
-                });
-
                 services.AddTransient<IDataLayer, DataLayerSql>();
             }
 
@@ -121,6 +126,7 @@ namespace RMRS.ConsoleApp
 
             // Поддержка ввода восточных языков, и пр.
             // Также необходим выбор соответствующего шрифта
+            // Часто ограничено возможностиями терминала
             if (Configuration.GetValue<bool>("UseUnicode"))
             {
                 Console.OutputEncoding = System.Text.Encoding.Unicode;
