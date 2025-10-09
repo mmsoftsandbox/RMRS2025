@@ -93,7 +93,10 @@ namespace RMRS.ConsoleApp
                     try
                     {
                         var action = menu.MenuTree?[menu.SelectedIndex]?.Operation;
-                        menu.SelectedIndex = 0;
+                        // Обнуляем не здесь, а после ввполнения операции или вначале while(),
+                        // т.к. menu.SelectedIndex испольуется в замыкании в делегате Operation()
+                        //menu.SelectedIndex = 0;
+
                         if (action != null)
                         {
                             Console.WriteLine(); // Отступ перед output опции
@@ -105,6 +108,7 @@ namespace RMRS.ConsoleApp
                                 return;
                             }
                         }
+                        menu.SelectedIndex = 0;
                     }
                     catch (Exception ex)
                     {
@@ -119,5 +123,31 @@ namespace RMRS.ConsoleApp
         /// Подсказка по клавишам навигации меню
         /// </summary>
         public override string HintDefault { get; } = "Для навигации используйте стрелки Вверх и Вниз, а для выбора <Enter>";
+
+        /// <summary>
+        /// Отрисовка таблицы. 
+        /// Значения в строках перечислены через запятую, без выравнивания по ширине
+        /// </summary>
+        /// <param name="rows">Построчные данные</param>
+        /// <param name="spec">Спецификациия колонок</param>
+        public override void PrintTable(List<List<object?>> rows, Dictionary<string, (int Width, string Title)> spec)
+        {
+            var lines = new List<string>();
+            var lineData = new List<string>();
+            var columns = spec.Keys.ToArray();
+            foreach (var row in rows)
+            {
+                lineData = row.Select(x => x == null ? "N/A" : x?.ToString()?.Trim() ?? string.Empty).ToList();
+                lines.Add(string.Join(", ", lineData));
+            }
+
+            // Шапка
+            lineData = spec
+                .Select(x => x.Value.Title).ToList();
+            lines.Insert(0, string.Join(", ", values: lineData));
+
+            PrintPage(lines);
+        }
+
     }
 }
